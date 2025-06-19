@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>{{ habit.name }} — {{ sel_date.strftime('%a %d %b %Y') }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+
+<body class="bg-gray-900 text-white">
+
+    <!-- Navbar -->
+    <nav class="flex items-center px-4 py-3 border-b border-gray-700">
+        <button onclick="history.back()" class="text-xl mr-4">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 class="flex-1 text-lg font-semibold">{{ habit.name }}</h1>
+        <button class="text-xl mr-4"><i class="fas fa-pen"></i></button>
+        <button class="text-xl"><i class="fas fa-ellipsis-v"></i></button>
+    </nav>
+
+    <!-- Frequency & Reminder -->
+    <div class="flex items-center gap-6 px-4 py-3 border-b border-gray-700 text-gray-400">
+        <div class="flex items-center gap-2">
+            <i class="far fa-calendar-alt"></i>
+            <span>{{ habit.frequency }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <i class="far fa-bell{{ '-slash' if habit.reminder=='Off' else '' }}"></i>
+            <span>{{ habit.reminder }}</span>
+        </div>
+    </div>
+
+    <!-- Overview -->
+    <section class="px-4 py-4 border-b border-gray-700">
+        <h2 class="text-blue-400 mb-2">Overview</h2>
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16">
+                <svg viewBox="0 0 36 36" class="w-full h-full">
+                    <path class="text-gray-700" stroke-width="4" fill="none"
+                        d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="text-blue-500" stroke-width="4" fill="none" stroke-dasharray="{{ score_week }},100"
+                        d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+            </div>
+            <div class="flex space-x-6 text-center">
+                <div>
+                    <div class="text-blue-400 font-semibold">{{ score_week }}%</div>
+                    <div class="text-xs text-gray-400">Week</div>
+                </div>
+                <div>
+                    <div class="text-blue-400 font-semibold">{{ score_month }}%</div>
+                    <div class="text-xs text-gray-400">Month</div>
+                </div>
+                <div>
+                    <div class="text-blue-400 font-semibold">{{ score_year }}%</div>
+                    <div class="text-xs text-gray-400">Year</div>
+                </div>
+                <div>
+                    <div class="text-blue-400 font-semibold">{{ total_done }}</div>
+                    <div class="text-xs text-gray-400">Total</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Score Chart & fallback -->
+    <section class="px-4 py-6 border-b border-gray-700">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-blue-400">Score</h2>
+        </div>
+        <div class="h-32 bg-gray-800 rounded p-2">
+            <canvas id="scoreChart" class="w-full h-full"></canvas>
+        </div>
+        <div class="mt-2 text-sm text-gray-400">
+            Week: {{ score_week }}%, Month: {{ score_month }}%, Year:
+            {{ score_year }}%, Total: {{ total_done }}
+        </div>
+    </section>
+
+    <!-- History Chart & fallback -->
+    <section class="px-4 py-6 border-b border-gray-700">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-blue-400">History (6 Weeks)</h2>
+        </div>
+        <div class="h-32 bg-gray-800 rounded p-2">
+            <canvas id="historyChart" class="w-full h-full"></canvas>
+        </div>
+        <div class="mt-2 text-sm text-gray-400">
+            {% for val in history %}
+            Week {{ loop.index }}: {{ val }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="px-4 py-6 border-b border-gray-700">
+        <h2 class="text-blue-400 mb-2">Calendar (Last 4 Months)</h2>
+        <div class="flex flex-wrap gap-4 overflow-x-auto">
+            {% for m in calendar_data %}
+            <div class="space-y-1">
+                <div class="text-xs font-semibold">{{ m.month }} {{ m.year }}</div>
+                <div class="grid grid-cols-7 gap-1">
+                    {% for day in m.days %}
+                    <div class="w-6 h-6 flex items-center justify-center text-xs rounded
+                       {% if day.status=='done' %}bg-blue-600 text-white
+                          {% elif day.status=='missed' %}bg-red-600 text-white
+                          {% else %}bg-gray-800 text-gray-400{% endif %}">
+                        {{ day.day }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Best Streak -->
+    <section class="px-4 py-6 border-b border-gray-700">
+        <h2 class="text-blue-400 mb-2">Best Streak</h2>
+        <div class="flex items-center gap-2 text-sm mb-2">
+            <span>{{ best_start.strftime('%d %b %Y') if best_start else '—' }}</span>
+            <div class="flex-1 h-4 bg-blue-600 rounded"></div>
+            <span>{{ best_end.strftime('%d %b %Y') if best_end else '—' }}</span>
+        </div>
+        <div class="text-center text-blue-400 font-semibold">{{ best_len }}</div>
+    </section>
+
+    <!-- Frequency -->
+    <section class="px-4 py-6">
+        <h2 class="text-blue-400 mb-2">Frequency</h2>
+        <div class="text-sm text-gray-400">{{ habit.frequency }}</div>
+    </section>
+
+    <!-- Timeline -->
+    <section class="px-4 py-6 pb-12">
+        <div class="flex justify-between text-xs text-gray-400">
+            {% for mon in ['Jul','Aug','Sept','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'] %}
+            <span>{{ mon }}</span>
+            {% endfor %}
+            <span>{{ sel_date.year }}</span>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Score bar chart
+        new Chart(document.getElementById('scoreChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Week', 'Month', 'Year', 'Total'],
+                datasets: [{
+                    label: '{{ habit.name }}',
+                    data: [{{ score_week }}, {{ score_month }}, {{ score_year }}, {{ total_done }}],
+            backgroundColor: ['rgba(59,130,246,0.7)']
+        }]
+      },
+            options: {
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            }
+        }
+    });
+
+        // History line chart
+        const historyData = {{ history | tojson }};
+        const historyLabels = historyData.map((_, i) => `Week ${i + 1}`);
+        new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: {
+                labels: historyLabels,
+                datasets: [{
+                    label: 'Completed',
+                    data: historyData,
+                    borderColor: 'rgba(59,130,246,0.7)',
+                    fill: false,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, max: 7 }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

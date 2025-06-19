@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Habits</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+        .scroll-hidden::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scroll-hidden {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            overflow-x: auto;
+        }
+
+        .scroll-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            background: #fff;
+            color: #000;
+            border-radius: 9999px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: opacity .2s;
+            opacity: .4;
+        }
+
+        .scroll-btn:hover {
+            opacity: .8;
+        }
+
+        .status-circle {
+            cursor: pointer;
+            user-select: none;
+            transition: color .2s;
+        }
+
+        .status-circle.pending {
+            color: #4b5563;
+        }
+
+        .status-circle.done {
+            color: #3b82f6;
+        }
+
+        .status-circle.missed {
+            color: #ef4444;
+        }
+
+        .measurable-cell {
+            display: inline-block;
+            width: 100%;
+            padding: .25rem;
+            text-align: center;
+            background: #1f2937;
+            border-radius: .25rem;
+            cursor: pointer;
+            user-select: none;
+            color: #9ca3af;
+        }
+
+        .measurable-cell.filled {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="flex justify-between items-center px-4 py-3 bg-gray-900 border-b border-gray-700">
+        <h1 class="text-xl font-semibold">Habits</h1>
+        <div class="flex items-center gap-4">
+            <button onclick="openModal()" class="text-xl">➕</button>
+            <button class="text-xl">🎛️</button>
+            <button class="text-xl">⋮</button>
+        </div>
+    </nav>
+
+    <!-- Scrollable Grid -->
+    <div class="relative">
+        <button id="scroll-left" class="scroll-btn absolute left-2 top-1/2 -translate-y-1/2 z-10">
+            <i class="fas fa-chevron-left text-xs"></i>
+        </button>
+        <div id="scroll-container" class="scroll-hidden">
+            <!-- Date Header -->
+            <div class="min-w-max flex px-4 py-2 gap-6 border-b border-gray-700">
+                <div class="w-[140px] shrink-0"></div>
+                {% for d in dates %}
+                <div class="text-center w-12 shrink-0">
+                    <div class="text-xs text-gray-400 uppercase">{{ get_day(d) }}</div>
+                    <div class="text-sm font-semibold">{{ d.day }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Yes/No Habits -->
+            {% for habit in yesno_habits %}
+            <div class="min-w-max flex px-4 py-3 gap-6 bg-gray-800 border-b border-gray-700 hover:bg-gray-700 cursor-pointer"
+                onclick="window.location.href='/habit/{{ habit.id }}/{{ dates[0].isoformat() }}'">
+                <div class="flex items-center gap-2 w-[140px] shrink-0">
+                    <div class="w-4 h-4 rounded-full" style="background-color: {{ habit.color }}"></div>
+                    <span class="text-blue-400 font-medium truncate">{{ habit.name }}</span>
+                </div>
+                {% for d in dates %}
+                {% set key=(habit.id,d) %}
+                {% set st=status_map.get(key,'pending') %}
+                <div class="text-center w-12 shrink-0"
+                    onclick="window.location.href='/habit/{{ habit.id }}/{{ d.isoformat() }}';">
+                    <span class="status-circle {{st}} text-xl" data-habit="{{habit.id}}" data-date="{{d.isoformat()}}"
+                        onclick="event.stopPropagation();">
+                        {% if st=='done' %}✔{% elif st=='missed' %}✖{% else %}○{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <!-- Measurable Habits -->
+            <h2 class="px-4 pt-6 text-lg font-semibold">Measurable</h2>
+            {% for habit in measurable_habits %}
+            <div
+                class="min-w-max flex px-4 py-3 gap-4 bg-gray-800 border-b border-gray-700 hover:bg-gray-700 cursor-pointer">
+                <div class="flex items-center gap-2 w-[140px] shrink-0">
+                    <div class="w-4 h-4 rounded-full" style="background-color: {{ habit.color }}"></div>
+                    <span class="text-green-400 font-medium truncate">{{ habit.name }} ({{ habit.unit }})</span>
+                </div>
+                {% for d in dates %}
+                {% set key=(habit.id,d) %}
+                <div class="w-12 shrink-0">
+                    <span class="measurable-cell {{ 'filled' if status_map.get(key) != '' }}" data-habit="{{habit.id}}"
+                        data-date="{{d.isoformat()}}" onclick="openMeasurableModal(this)">
+                        {{ status_map.get(key,'') }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <button id="scroll-right" class="scroll-btn absolute right-2 top-1/2 -translate-y-1/2 z-10">
+            <i class="fas fa-chevron-right text-xs"></i>
+        </button>
+    </div>
+
+    <!-- Notes & Value Modal -->
+    <div id="measurableModal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg w-72 p-4 relative">
+            <h3 class="text-center text-lg font-semibold mb-2">Enter Value & Notes</h3>
+            <textarea id="measurableNotes" rows="3" placeholder="Optional notes..."
+                class="w-full px-2 py-1 bg-gray-700 rounded text-white resize-none mb-3"></textarea>
+            <div class="flex items-center mb-3">
+                <input id="measurableValue" type="number" min="0" step="any"
+                    class="flex-1 px-3 py-2 bg-gray-700 rounded-l text-white outline-none" placeholder="0">
+                <button id="measurableSave" class="px-4 py-2 bg-blue-600 rounded-r hover:bg-blue-500">
+                    SAVE
+                </button>
+            </div>
+            <button onclick="closeMeasurableModal()"
+                class="absolute top-2 right-3 text-gray-400 hover:text-white text-2xl leading-none">
+                &times;
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Habit Modal -->
+    <div id="habitModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40">
+        <div class="bg-gray-800 p-6 rounded-xl shadow-xl w-80">
+            <h2 class="text-lg font-semibold mb-4 text-white">Choose Habit Type</h2>
+            <div class="flex flex-col gap-4 mb-6">
+                <button onclick="window.location.href='/add-yesno'"
+                    class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white">
+                    Add Yes/No Habit
+                </button>
+                <button onclick="window.location.href='/add-measurable'"
+                    class="w-full px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-white">
+                    Add Measurable Habit
+                </button>
+            </div>
+            <button onclick="closeModal()"
+                class="px-4 py-1 bg-gray-600 hover:bg-gray-500 rounded text-white mx-auto block">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script>
+        let scrollContainer, currentCell;
+        document.addEventListener("DOMContentLoaded", () => {
+            scrollContainer = document.getElementById("scroll-container");
+            document.getElementById("scroll-left")
+                .addEventListener("click", () => scrollContainer.scrollBy({ left: -300, behavior: 'smooth' }));
+            document.getElementById("scroll-right")
+                .addEventListener("click", () => scrollContainer.scrollBy({ left: 300, behavior: 'smooth' }));
+            scrollContainer.scrollLeft = 0;
+
+            // Yes/No toggle persistence
+            document.querySelectorAll('.status-circle').forEach(el => {
+                el.addEventListener('click', async e => {
+                    e.stopPropagation();
+                    let next = el.classList.contains('pending') ? 'done'
+                        : el.classList.contains('done') ? 'missed'
+                            : 'pending';
+                    el.classList.remove('pending', 'done', 'missed');
+                    el.classList.add(next);
+                    el.textContent = next === 'done' ? '✔' : next === 'missed' ? '✖' : '○';
+                    await fetch('/update-status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            habit_id: parseInt(el.dataset.habit),
+                            date: el.dataset.date,
+                            status: next
+                        })
+                    });
+                });
+            });
+
+            // Save measurable entry
+            document.getElementById('measurableSave').addEventListener('click', () => {
+                const value = document.getElementById('measurableValue').value.trim();
+                const notes = document.getElementById('measurableNotes').value.trim();
+                // TODO: send to /update-measurable
+                currentCell.textContent = value;
+                currentCell.classList.toggle('filled', value !== '');
+                closeMeasurableModal();
+            });
+        });
+
+        function openModal() {
+            document.getElementById('habitModal').classList.replace('hidden', 'flex');
+        }
+        function closeModal() {
+            document.getElementById('habitModal').classList.replace('flex', 'hidden');
+        }
+        function openMeasurableModal(el) {
+            currentCell = el;
+            document.getElementById('measurableValue').value = el.textContent.trim() || '';
+            document.getElementById('measurableNotes').value = '';
+            document.getElementById('measurableModal').classList.replace('hidden', 'flex');
+        }
+        function closeMeasurableModal() {
+            document.getElementById('measurableModal').classList.replace('flex', 'hidden');
+        }
+    </script>
+</body>
+
+</html>
