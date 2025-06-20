@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Habit Analysis{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">Habit Analysis</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for habit in habits %}
+        <div class="bg-white rounded shadow p-4">
+            <h2 class="text-xl font-semibold mb-2">{{ habit.name }}</h2>
+            <p class="text-gray-600 mb-4">{{ habit.question }}</p>
+        
+            <!-- Mini calendar -->
+            <div class="grid grid-cols-7 gap-1 text-center text-sm mb-4">
+                {% for d in calendar_days %}
+                {% set is_yes = d.date_str in marked_dates.get(habit.id, []) %}
+                <div class="p-2 rounded 
+                                  {% if is_yes %}
+                                    bg-green-400 text-white font-semibold
+                                  {% else %}
+                                    bg-gray-100
+                                  {% endif %}">
+                    {{ d.day }}
+                </div>
+                {% endfor %}
+            </div>
+        
+            <!-- Visual Analysis Button -->
+            <div class="text-right">
+                <a href="{{ url_for('habit_visual', habit_id=habit.id) }}"
+                    class="mt-2 inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">
+                    Visual Analysis
+                </a>
+            </div>
+        </div>          
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

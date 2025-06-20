@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Navbar -->
+<nav class="w-full bg-blue-600 text-white px-6 py-4 shadow flex items-center justify-between relative">
+    <!-- Left: App Title -->
+    <div class="text-2xl font-bold">Habit Tracker</div>
+
+    <!-- Center: Welcome -->
+    <div class="absolute left-1/2 transform -translate-x-1/2 text-white text-lg font-medium">
+        Welcome, {{ username }}
+    </div>
+
+    <!-- Right: Buttons -->
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('habit_analysis') }}"
+            class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
+            Habit Analysis
+        </a>
+        <a href="{{ url_for('measurable_analysis') }}"
+            class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
+            Measurement Analysis
+        </a>
+    </div>
+</nav>  
+  
+
+<main class="max-w-6xl mx-auto mt-8 px-4 relative">
+    <h1 class="text-4xl font-extrabold mb-8 text-center">{{ month_name }}</h1>
+
+    <div class="grid grid-cols-7 gap-4">
+        {% for d in days %}
+        <div onclick="openDayDetail('{{ d.date_str }}')" class="p-4 rounded-lg shadow cursor-pointer text-center relative
+             {% if d.is_today %}bg-blue-600 text-white font-bold shadow-lg{% else %}bg-white hover:bg-blue-100{% endif %}">
+        
+            <div class="text-sm font-medium">{{ d.weekday }}</div>
+            <div class="text-2xl mt-1">{{ d.day }}</div>
+        
+            {% if habit_badges.get(d.date_str) %}
+            <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Habit</div>
+            <div class="flex justify-center gap-1 mt-1">
+                {% for color in habit_badges[d.date_str] %}
+                <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: {{ color }}"></span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        
+            {% if measurable_badges.get(d.date_str) %}
+            <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Measurable</div>
+            <div class="flex justify-center gap-1 mt-1">
+                {% for color in measurable_badges[d.date_str] %}
+                <span class="inline-block w-2.5 h-2.5 rounded-full border border-white"
+                    style="background-color: {{ color }}"></span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if show_prev %}
+    <a href="{{ url_for('home', year=prev_year, month=prev_month) }}"
+        class="fixed top-1/2 left-4 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg cursor-pointer"
+        title="Previous Month">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-180" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+    </a>
+    {% endif %}
+
+    <a href="{{ url_for('home', year=next_year, month=next_month) }}"
+        class="fixed top-1/2 right-4 -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg cursor-pointer"
+        title="Next Month">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+    </a>
+
+    <!-- Floating Plus Button -->
+    <button id="openModalBtn"
+        class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg"
+        title="Add Habit">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+    </button>
+</main>
+
+<!-- Modal 1: Habit Type Selector -->
+<div id="habitModal"
+    class="fixed inset-0 flex items-center justify-center hidden z-50 bg-black bg-opacity-30 backdrop-blur-sm">
+    <div class="relative">
+        <!-- Close Button -->
+        <button id="closeModalBtn"
+            class="absolute -top-6 right-0 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        <!-- Type Cards -->
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-8">
+            <div class="space-y-6">
+                <button id="yesNoBtn"
+                    class="w-full p-6 border border-gray-300 rounded-lg text-left font-semibold text-lg hover:shadow-lg hover:bg-black hover:text-white group">
+                    Yes or No
+                    <p class="mt-2 text-sm text-gray-600 group-hover:text-white">
+                        e.g. Did you wake up early today? Did you exercise? Did you play chess?
+                    </p>
+                </button>
+                <button id="measurableBtn"
+                    class="w-full p-6 border border-gray-300 rounded-lg text-left font-semibold text-lg hover:shadow-lg hover:bg-black hover:text-white group">
+                    Measurable
+                    <p class="mt-2 text-sm text-gray-600 group-hover:text-white">
+                        e.g. How many miles did you run today? How many pages did you read?
+                    </p>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Yes/No Habit Form -->
+<div id="habitFormModal"
+    class="fixed inset-0 flex items-center justify-center hidden z-50 bg-black bg-opacity-30 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-8 relative">
+        <button onclick="closeFormModal()"
+            class="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        <form method="POST" action="{{ url_for('add_habit') }}" class="space-y-6">
+            <input type="hidden" name="type" value="yesno">
+
+            <div>
+                <label class="block font-semibold mb-1">Name</label>
+                <input type="text" name="name" required class="w-full border border-gray-300 rounded p-2" />
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Question</label>
+                <input type="text" name="question" required class="w-full border border-gray-300 rounded p-2" />
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Notes</label>
+                <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded p-2"></textarea>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Color</label>
+                <input type="color" name="color" value="#3b82f6" class="w-12 h-10 p-1 border border-gray-300 rounded" />
+            </div>
+
+            <div class="text-right">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save
+                    Habit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 3: Measurable Habit Form -->
+<div id="measurableFormModal"
+    class="fixed inset-0 flex items-center justify-center hidden z-50 bg-black bg-opacity-30 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-8 relative">
+        <button onclick="closeMeasurableForm()"
+            class="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <form method="POST" action="{{ url_for('add_habit') }}" class="space-y-6">
+            <input type="hidden" name="type" value="measurable">
+            <div><label class="block font-semibold mb-1">Name</label><input type="text" name="name" required
+                    class="w-full border rounded p-2" /></div>
+            <div><label class="block font-semibold mb-1">Question</label><input type="text" name="question" required
+                    class="w-full border rounded p-2" /></div>
+            <div><label class="block font-semibold mb-1">Unit Target</label><input type="text" name="unit_target"
+                    required class="w-full border rounded p-2" /></div>
+            <div><label class="block font-semibold mb-1">Target Type</label>
+                <select name="target_type" class="w-full border rounded p-2">
+                    <option value="atleast">Atleast</option>
+                    <option value="atmost">Atmost</option>
+                </select>
+            </div>
+            <div><label class="block font-semibold mb-1">Notes</label><textarea name="notes"
+                    class="w-full border rounded p-2"></textarea></div>
+            <div><label class="block font-semibold mb-1">Color</label><input type="color" name="color" value="#22c55e"
+                    class="w-12 h-10 rounded" /></div>
+            <div class="text-right"><button type="submit"
+                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save Measurable Habit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Day Details -->
+<!-- Modal: Day Details -->
+<div id="dayDetailModal"
+    class="fixed inset-0 z-50 bg-black bg-opacity-40 backdrop-blur-sm hidden items-center justify-center">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 relative">
+        <button onclick="closeDayDetailModal()"
+            class="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow">
+            ✕
+        </button>
+        <h2 class="text-2xl font-bold mb-6 text-center" id="dayDetailTitle">Day Details</h2>
+
+        <form id="dayDetailForm" class="space-y-6 text-sm text-gray-800">
+            <div id="dayDetailContent">Loading...</div>
+
+            <div class="text-right">
+                <button type="submit"
+                    class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>  
+
+<script>
+    const modal = document.getElementById('habitModal');
+    const formModal = document.getElementById('habitFormModal');
+    const measurableModal = document.getElementById('measurableFormModal');
+    const openBtn = document.getElementById('openModalBtn');
+    const closeBtn = document.getElementById('closeModalBtn');
+    const yesNoBtn = document.getElementById('yesNoBtn');
+    const measurableBtn = document.getElementById('measurableBtn');
+
+    openBtn.onclick = () => modal.classList.remove('hidden');
+    closeBtn.onclick = () => modal.classList.add('hidden');
+    modal.onclick = e => { if (e.target === modal) modal.classList.add('hidden'); };
+
+    yesNoBtn.onclick = () => {
+        modal.classList.add('hidden');
+        formModal.classList.remove('hidden');
+    };
+    measurableBtn.onclick = () => {
+        modal.classList.add('hidden');
+        measurableModal.classList.remove('hidden');
+    };
+    function closeFormModal() {
+        formModal.classList.add('hidden');
+    }
+    function closeMeasurableForm() {
+        measurableModal.classList.add('hidden');
+    }
+</script>
+<script>
+    let currentDateStr = '';
+
+    function openDayDetail(dateStr) {
+        currentDateStr = dateStr;
+
+        const modal = document.getElementById('dayDetailModal');
+        const title = document.getElementById('dayDetailTitle');
+        const content = document.getElementById('dayDetailContent');
+
+        title.textContent = `Habits on ${dateStr}`;
+        content.innerHTML = 'Loading...';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        fetch(`/day_data/${dateStr}`)
+            .then(res => res.json())
+            .then(data => {
+                let html = '';
+
+                // YES/NO HABITS
+                if (data.habits.length > 0) {
+                    html += `<h3 class="text-lg font-semibold mb-2">Yes/No Habits</h3>`;
+                    data.habits.forEach(h => {
+                        const checked = data.habit_logs[h.id] === true ? 'checked' : '';
+                        html += `
+              <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
+                <div>
+                  <p class="font-semibold">${h.name}</p>
+                  <p class="text-gray-500">${h.question}</p>
+                </div>
+                <label class="relative inline-block w-12 h-7">
+                  <input type="checkbox" name="habit-${h.id}" ${checked} class="sr-only peer">
+                  <div class="absolute inset-0 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors duration-300 shadow-inner"></div>
+                  <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 peer-checked:translate-x-5"></div>
+                </label>
+              </div>`;
+                    });
+                }
+
+                // MEASURABLES
+                if (data.measurables.length > 0) {
+                    html += `<h3 class="text-lg font-semibold mt-6 mb-2">Measurables</h3>`;
+                    data.measurables.forEach(m => {
+                        const val = data.measurable_logs[m.id] || '';
+                        html += `
+              <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
+                <div>
+                  <p class="font-semibold">${m.name}</p>
+                  <p class="text-gray-500">${m.question}</p>
+                </div>
+                <input type="number" name="measurable-${m.id}" value="${val}" class="w-24 p-2 border rounded text-right">
+              </div>`;
+                    });
+                }
+
+                if (!data.habits.length && !data.measurables.length) {
+                    html = `<p class="text-center text-gray-600">No habits or measurables defined.</p>`;
+                }
+
+                content.innerHTML = html;
+            });
+    }
+
+    function closeDayDetailModal() {
+        document.getElementById('dayDetailModal').classList.add('hidden');
+        location.reload(); // Refresh calendar
+    }
+
+    document.getElementById('dayDetailForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const updates = [];
+
+        // Habits
+        document.querySelectorAll('input[type="checkbox"][name^="habit-"]').forEach(el => {
+            updates.push({
+                type: 'habit',
+                id: el.name.split('-')[1],
+                value: el.checked
+            });
+        });
+
+        // Measurables
+        document.querySelectorAll('input[type="number"][name^="measurable-"]').forEach(el => {
+            updates.push({
+                type: 'measurable',
+                id: el.name.split('-')[1],
+                value: parseFloat(el.value || 0)
+            });
+        });
+
+        Promise.all(updates.map(update => {
+            const url = update.type === 'habit' ? '/update_habit' : '/update_measurable';
+            const body = update.type === 'habit'
+                ? `habit_id=${update.id}&date=${currentDateStr}&value=${update.value}`
+                : `measurable_id=${update.id}&date=${currentDateStr}&value=${update.value}`;
+
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body
+            });
+        })).then(() => {
+            closeDayDetailModal();  // ✅ Save, close modal, refresh calendar
+        });
+    });
+</script>    
+{% endblock %}

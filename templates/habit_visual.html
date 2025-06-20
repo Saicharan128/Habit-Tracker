@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Visual Analysis - {{ habit.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-center mb-4">Visual Analysis for "{{ habit.name }}"</h1>
+    <p class="text-center text-gray-600 mb-6">{{ habit.question }}</p>
+
+    <!-- Toggle Buttons -->
+    <div class="flex justify-center gap-4 mb-6">
+        <a href="{{ url_for('habit_visual', habit_id=habit.id, view='week') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='week' else 'bg-gray-100 text-gray-700' }}">
+            Weekly
+        </a>
+        <a href="{{ url_for('habit_visual', habit_id=habit.id, view='month') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='month' else 'bg-gray-100 text-gray-700' }}">
+            Monthly
+        </a>
+        <a href="{{ url_for('habit_visual', habit_id=habit.id, view='year') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='year' else 'bg-gray-100 text-gray-700' }}">
+            Yearly
+        </a>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- XP Bar Chart -->
+        <div class="bg-white shadow p-4 rounded">
+            <h2 class="text-lg font-semibold mb-2">📊 XP Chart ({{ view|capitalize }})</h2>
+            <canvas id="barChart" height="240"></canvas>
+        </div>
+
+        <!-- Yes/No Pie Chart -->
+        <div class="bg-white shadow p-4 rounded">
+            <h2 class="text-lg font-semibold mb-2">✅ Yes vs No</h2>
+            <canvas id="pieChart" height="240"></canvas>
+        </div>
+    </div>
+
+    {% if view != 'year' %}
+    <!-- Streak Display -->
+    <div class="bg-white shadow p-4 rounded mt-6 text-center">
+        <p class="text-lg font-medium">
+            🔥 Longest Streak:
+            <span class="text-green-600 font-bold">{{ longest_streak }}</span> days
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+
+    // Bar Chart
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ labels | tojson }},
+        datasets: [{
+            label: 'XP',
+            data: {{ values | tojson }},
+        backgroundColor: 'rgba(34,197,94,0.8)',
+        borderRadius: 5
+    }]
+  },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 10 }
+            }
+        }
+    }
+});
+
+    // Pie Chart
+    new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Yes', 'No'],
+            datasets: [{
+                data: [{{ yes_count }}, {{ no_count }}],
+        backgroundColor: ['#22c55e', '#e5e7eb']
+    }]
+  },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+</script>
+{% endblock %}

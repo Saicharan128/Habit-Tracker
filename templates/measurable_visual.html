@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Visual Analysis - {{ m.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-center mb-4">Visual Analysis for "{{ m.name }}"</h1>
+    <p class="text-center text-gray-600 mb-4">{{ m.question }}</p>
+    <p class="text-center text-sm text-gray-500 mb-8">🎯 Target: {{ m.unit_target }} ({{ m.target_type|capitalize }})
+    </p>
+
+    <!-- Toggle -->
+    <div class="flex justify-center gap-4 mb-6">
+        <a href="{{ url_for('measurable_visual', measurable_id=m.id, view='week') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='week' else 'bg-gray-100 text-gray-700' }}">Weekly</a>
+        <a href="{{ url_for('measurable_visual', measurable_id=m.id, view='month') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='month' else 'bg-gray-100 text-gray-700' }}">Monthly</a>
+        <a href="{{ url_for('measurable_visual', measurable_id=m.id, view='year') }}"
+            class="px-4 py-2 rounded {{ 'bg-blue-600 text-white' if view=='year' else 'bg-gray-100 text-gray-700' }}">Yearly</a>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white shadow p-4 rounded mb-6">
+        <h2 class="text-lg font-semibold mb-2">📊 {{ view|capitalize }} Performance</h2>
+        <canvas id="unitChart"></canvas>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center bg-white p-4 rounded shadow">
+        <div>
+            <p class="text-gray-500">📈 Average</p>
+            <p class="text-xl font-bold text-blue-600">{{ avg }}</p>
+        </div>
+        <div>
+            <p class="text-gray-500">🔺 Highest</p>
+            <p class="text-xl font-bold text-green-600">{{ highest }}</p>
+        </div>
+        <div>
+            <p class="text-gray-500">🔻 Lowest</p>
+            <p class="text-xl font-bold text-red-600">{{ lowest }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    new Chart(document.getElementById("unitChart"), {
+        type: 'line',
+        data: {
+            labels: {{ labels | tojson }},
+        datasets: [{
+            label: 'Units',
+            data: {{ values | tojson }},
+        borderColor: 'rgba(59,130,246,1)',
+        backgroundColor: 'rgba(59,130,246,0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+    }]
+  },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

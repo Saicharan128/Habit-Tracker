@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Create Yes/No Habit{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-12 p-6 bg-gray-900 text-white rounded-lg shadow-md">
+    <h2 class="text-xl font-semibold mb-6">Create habit</h2>
+
+    <form method="POST" class="space-y-6">
+        <!-- Name & Color -->
+        <div class="flex space-x-4">
+            <div class="flex-1">
+                <label class="block mb-1 font-semibold">Name</label>
+                <input name="name" type="text" placeholder="e.g. Exercise"
+                    class="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-500 border border-gray-700"
+                    required />
+            </div>
+            <div>
+                <label class="block mb-1 font-semibold">Color</label>
+                <input name="color" type="color" value="#60a5fa" class="w-14 h-10 rounded cursor-pointer" required />
+            </div>
+        </div>
+
+        <!-- Question -->
+        <div>
+            <label class="block mb-1 font-semibold">Question</label>
+            <input name="question" type="text" placeholder="e.g. Did you exercise today?"
+                class="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-500 border border-gray-700"
+                required />
+        </div>
+
+        <!-- Frequency -->
+        <div>
+            <label class="block mb-1 font-semibold">Frequency</label>
+            <select name="frequency"
+                class="w-full p-2 rounded bg-gray-800 text-white border border-gray-700 cursor-pointer" required>
+                <option>Every day</option>
+                <option>Every week</option>
+                <option>Every month</option>
+                <option>Custom</option>
+            </select>
+        </div> 
+
+        <!-- Notes -->
+        <div>
+            <label class="block mb-1 font-semibold">Notes</label>
+            <textarea name="notes" placeholder="(Optional)" rows="3"
+                class="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-500 border border-gray-700 resize-none"></textarea>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-between items-center">
+            <a href="{{ url_for('home') }}" class="text-gray-400 hover:text-white">← Back</a>
+            <button type="submit"
+                class="px-6 py-2 bg-blue-600 rounded hover:bg-blue-700 transition text-white font-semibold">
+                SAVE
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
