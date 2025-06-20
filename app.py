@@ -48,6 +48,11 @@ class MeasurableLog(db.Model):
     date = db.Column(db.String(10), nullable=False)
     value = db.Column(db.Float)
 
+class Journal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.String(10), nullable=False)  # Format: YYYY-MM-DD
+    content = db.Column(db.Text, nullable=True)
 
 # ------------------ Routes ------------------
 @app.route('/')
@@ -464,6 +469,45 @@ def measurable_visual(measurable_id):
         return render_template("measurable_visual.html", m=m, view=view,
                                labels=labels, values=values,
                                avg=avg, highest=high, lowest=low)
+
+@app.route('/journal/<date>', methods=['GET'])
+def get_journal(date):
+    if 'user_id' not in session:
+        return '', 401
+    entry = Journal.query.filter_by(user_id=session['user_id'], date=date).first()
+    return entry.content if entry else ''
+
+@app.route('/journal/<date>', methods=['POST'])
+def save_journal(date):
+    if 'user_id' not in session:
+        return '', 401
+    content = request.form.get('content', '')
+    entry = Journal.query.filter_by(user_id=session['user_id'], date=date).first()
+    if entry:
+        entry.content = content
+    else:
+        entry = Journal(user_id=session['user_id'], date=date, content=content)
+        db.session.add(entry)
+    db.session.commit()
+    return 'Saved'
+
+@app.route('/all_journals')
+def all_journals():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    from collections import defaultdict
+    from datetime import datetime
+
+    entries = Journal.query.filter_by(user_id=session['user_id']).order_by(Journal.date.desc()).all()
+    
+    journal_map = defaultdict(list)
+    for entry in entries:
+        dt = datetime.strptime(entry.date, "%Y-%m-%d")
+        key = dt.strftime("%B %Y")  # e.g. "June 2024"
+        journal_map[key].append({'date': entry.date, 'text': entry.content})
+
+    return render_template("all_journals.html", journal_map=journal_map)
 
 @app.route('/logout')
 def logout():

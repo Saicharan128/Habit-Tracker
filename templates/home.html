@@ -22,9 +22,12 @@
             class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
             Measurement Analysis
         </a>
+        <button onclick="openJournalModal(new Date().toISOString().split('T')[0])"
+            class="bg-yellow-100 text-gray-800 px-3 py-1.5 rounded hover:bg-yellow-200 transition text-sm font-semibold shadow">
+            📝 Journal
+        </button>
     </div>
-</nav>  
-  
+</nav>
 
 <main class="max-w-6xl mx-auto mt-8 px-4 relative">
     <h1 class="text-4xl font-extrabold mb-8 text-center">{{ month_name }}</h1>
@@ -88,6 +91,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
     </button>
+
+    <div class="mt-6 text-center">
+        <a href="{{ url_for('all_journals') }}"
+            class="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 py-2 rounded shadow">
+            📘 View All Journals
+        </a>
+    </div>      
+
 </main>
 
 <!-- Modal 1: Habit Type Selector -->
@@ -226,6 +237,36 @@
     </div>
 </div>  
 
+<!-- Journal Modal -->
+<div id="journalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-2xl p-6 bg-white border border-gray-300 rounded-xl shadow-[0_15px_30px_rgba(0,0,0,0.2)]"
+        style="background-image: repeating-linear-gradient(to bottom, #ffffff, #ffffff 34px, #cbd5e1 35px);">
+
+        <!-- Header -->
+        <h2 class="text-2xl font-bold text-center mb-4" style="font-family: 'Patrick Hand', cursive;">
+            📝 Journal for <span id="journalDateLabel"></span>
+        </h2>
+
+        <!-- Textarea -->
+        <textarea id="journalContent" rows="10"
+            class="w-full p-6 bg-transparent outline-none resize-none text-[20px] leading-[35px]"
+            style="font-family: 'Patrick Hand', cursive;"></textarea>
+
+        <!-- Actions -->
+        <div class="mt-4 flex justify-between">
+            <button onclick="closeJournalModal()" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                Cancel
+            </button>
+            <button onclick="submitJournal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Save
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Handwriting Font -->
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">  
+
 <script>
     const modal = document.getElementById('habitModal');
     const formModal = document.getElementById('habitFormModal');
@@ -362,5 +403,33 @@
             closeDayDetailModal();  // ✅ Save, close modal, refresh calendar
         });
     });
-</script>    
+</script>
+<script>
+    let currentJournalDate = '';
+
+    function openJournalModal(dateStr) {
+        currentJournalDate = dateStr;
+        document.getElementById('journalDateLabel').textContent = dateStr;
+        document.getElementById('journalModal').classList.remove('hidden');
+
+        fetch(`/journal/${dateStr}`)
+            .then(res => res.text())
+            .then(text => {
+                document.getElementById('journalContent').value = text;
+            });
+    }
+
+    function closeJournalModal() {
+        document.getElementById('journalModal').classList.add('hidden');
+    }
+
+    function submitJournal() {
+        const content = document.getElementById('journalContent').value;
+        fetch(`/journal/${currentJournalDate}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'content=' + encodeURIComponent(content)
+        }).then(() => closeJournalModal());
+    }
+</script>          
 {% endblock %}

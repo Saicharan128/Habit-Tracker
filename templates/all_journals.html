@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}All Journals{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-10">
+    <h1 class="text-3xl font-bold text-center mb-8">📘 All Journal Entries</h1>
+
+    {% for month, entries in journal_map.items() %}
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold text-blue-700 mb-2">{{ month }}</h2>
+        <div class="flex flex-wrap gap-3">
+            {% for e in entries %}
+            <button type="button" onclick="showJournal(this)" data-date="{{ e.date }}" data-text="{{ e.text | escape }}"
+                class="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded text-sm shadow">
+                {{ e.date }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Journal Modal -->
+<div id="journalReadModal"
+    class="fixed inset-0 hidden flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
+    <div class="relative w-full max-w-2xl mx-auto p-6 bg-white border border-gray-300 rounded-xl shadow-2xl"
+        style="background-image: repeating-linear-gradient(to bottom, #ffffff, #ffffff 34px, #cbd5e1 35px);">
+
+        <h2 class="text-2xl font-bold text-center mb-4" style="font-family: 'Patrick Hand', cursive;">
+            📝 Journal for <span id="journalReadDate"></span>
+        </h2>
+
+        <div id="journalReadText"
+            class="whitespace-pre-line px-4 py-2 text-[20px] leading-[35px] overflow-y-auto max-h-[300px]"
+            style="font-family: 'Patrick Hand', cursive;"></div>
+
+        <div class="mt-6 flex justify-between">
+            <button onclick="downloadJournalAsPDF()"
+                class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                📄 Download PDF
+            </button>
+            <button onclick="closeJournalReadModal()" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Fonts & Scripts -->
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    function showJournal(button) {
+        const date = button.getAttribute('data-date');
+        const text = button.getAttribute('data-text');
+
+        document.getElementById('journalReadDate').textContent = date;
+        document.getElementById('journalReadText').textContent = text;
+
+        const modal = document.getElementById('journalReadModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeJournalReadModal() {
+        const modal = document.getElementById('journalReadModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    async function downloadJournalAsPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: "portrait",
+            unit: "pt",
+            format: "a4"
+        });
+
+        const date = document.getElementById('journalReadDate').textContent;
+        const text = document.getElementById('journalReadText').textContent;
+
+        doc.setFont("Courier", "normal");
+        doc.setFontSize(18);
+        doc.setTextColor(20, 20, 20);
+        doc.text(`📝 Journal for ${date}`, 40, 60);
+
+        doc.setFontSize(14);
+        const lines = doc.splitTextToSize(text, 500);
+        let y = 100;
+
+        const lineHeight = 28;
+        lines.forEach(line => {
+            doc.text(line, 40, y);
+            y += lineHeight;
+        });
+
+        doc.save(`Journal-${date}.pdf`);
+    }
+</script>
+{% endblock %}
