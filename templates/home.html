@@ -2,6 +2,87 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+<!-- Flash Messages - Floating notification -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div id="flashContainer" class="fixed top-0 left-1/2 transform -translate-x-1/2 z-[100] mt-4">
+    {% for category, message in messages %}
+    <div class="flash-message p-4 mb-2 rounded-lg shadow-lg border-l-4 min-w-[300px] max-w-[500px]
+                {% if category == 'error' %}bg-red-50 text-red-800 border-red-500{% endif %}
+                {% if category == 'success' %}bg-green-50 text-green-800 border-green-500{% endif %}
+                animate-slideDown">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                {% if category == 'error' %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                {% endif %}
+                {% if category == 'success' %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                {% endif %}
+                <span class="font-medium">{{ message }}</span>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-gray-400 hover:text-gray-600">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
+    .animate-slideDown {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .flash-message {
+        backdrop-filter: blur(10px);
+    }
+</style>
+
+<script>
+    // Auto-hide flash messages after 4 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        const flashMessages = document.querySelectorAll('.flash-message');
+        flashMessages.forEach(function (message) {
+            setTimeout(function () {
+                message.style.opacity = '0';
+                message.style.transform = 'translateX(-50%) translateY(-20px)';
+                setTimeout(function () {
+                    if (message.parentElement) {
+                        message.remove();
+                    }
+                }, 300);
+            }, 4000);
+        });
+    });
+</script>
+{% endif %}
+{% endwith %}
+
 <!-- Navbar -->
 <nav class="w-full bg-blue-600 text-white px-6 py-4 shadow flex items-center justify-between relative">
     <!-- Left: App Title -->
@@ -22,10 +103,66 @@
             class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
             Measurement Analysis
         </a>
-        <button onclick="openJournalModal(new Date().toISOString().split('T')[0])"
-            class="bg-yellow-100 text-gray-800 px-3 py-1.5 rounded hover:bg-yellow-200 transition text-sm font-semibold shadow">
-            📝 Journal
-        </button>
+
+        <!-- Settings Dropdown -->
+        <div class="relative">
+            <button id="settingsBtn"
+                class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow flex items-center gap-1">
+                ⚙️ Settings
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+
+            <div id="settingsDropdown"
+                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden">
+                <!-- Profile Section -->
+                <div class="p-3 border-b border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {{ username[0].upper() }}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800">{{ username }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Download Section -->
+                <div class="py-2">
+                    <p class="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">Download Analysis</p>
+                    <button id="jsonExportBtn" onclick="downloadAnalysisJSON()"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-left">
+                        <span class="text-blue-500">📄</span>
+                        <span>Export as JSON</span>
+                    </button>
+                    <button id="excelExportBtn" onclick="downloadAnalysisExcel()"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-left">
+                        <span class="text-green-500">📊</span>
+                        <span>Export as Excel</span>
+                    </button>
+                </div>
+
+                <!-- All Journals Link -->
+                <div class="border-t border-gray-200 py-2">
+                    <a href="{{ url_for('all_journals') }}"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50">
+                        <span class="text-purple-500">📘</span>
+                        View All Journals
+                    </a>
+                </div>
+
+                <!-- Logout -->
+                <div class="border-t border-gray-200 py-2">
+                    <a href="{{ url_for('logout') }}"
+                        class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50">
+                        <span>🚪</span>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </nav>
 
@@ -34,30 +171,40 @@
 
     <div class="grid grid-cols-7 gap-4">
         {% for d in days %}
-        <div onclick="openDayDetail('{{ d.date_str }}')" class="p-4 rounded-lg shadow cursor-pointer text-center relative
+        <div
+            class="p-4 rounded-lg shadow cursor-pointer text-center relative group
              {% if d.is_today %}bg-blue-600 text-white font-bold shadow-lg{% else %}bg-white hover:bg-blue-100{% endif %}">
-        
-            <div class="text-sm font-medium">{{ d.weekday }}</div>
-            <div class="text-2xl mt-1">{{ d.day }}</div>
-        
-            {% if habit_badges.get(d.date_str) %}
-            <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Habit</div>
-            <div class="flex justify-center gap-1 mt-1">
-                {% for color in habit_badges[d.date_str] %}
-                <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: {{ color }}"></span>
-                {% endfor %}
+
+            <div onclick="openDayDetail('{{ d.date_str }}')" class="cursor-pointer">
+                <div class="text-sm font-medium">{{ d.weekday }}</div>
+                <div class="text-2xl mt-1">{{ d.day }}</div>
+
+                {% if habit_badges.get(d.date_str) %}
+                <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Habit</div>
+                <div class="flex justify-center gap-1 mt-1">
+                    {% for color in habit_badges[d.date_str] %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: {{ color }}"></span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if measurable_badges.get(d.date_str) %}
+                <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Measurable</div>
+                <div class="flex justify-center gap-1 mt-1">
+                    {% for color in measurable_badges[d.date_str] %}
+                    <span class="inline-block w-2.5 h-2.5 rounded-full border border-white"
+                        style="background-color: {{ color }}"></span>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
-        
-            {% if measurable_badges.get(d.date_str) %}
-            <div class="mt-2 text-xs text-gray-600 {% if d.is_today %}text-white{% endif %}">Measurable</div>
-            <div class="flex justify-center gap-1 mt-1">
-                {% for color in measurable_badges[d.date_str] %}
-                <span class="inline-block w-2.5 h-2.5 rounded-full border border-white"
-                    style="background-color: {{ color }}"></span>
-                {% endfor %}
-            </div>
-            {% endif %}
+
+            <!-- Journal Button - appears on hover -->
+            <button onclick="event.stopPropagation(); openJournalModal('{{ d.date_str }}')"
+                class="absolute bottom-2 right-2 w-6 h-6 bg-yellow-400 hover:bg-yellow-500 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm"
+                title="Write Journal">
+                📝
+            </button>
         </div>
         {% endfor %}
     </div>
@@ -91,14 +238,6 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
         </svg>
     </button>
-
-    <div class="mt-6 text-center">
-        <a href="{{ url_for('all_journals') }}"
-            class="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded shadow">
-            📘 View All Journals
-        </a>
-    </div>      
-
 </main>
 
 <!-- Modal 1: Habit Type Selector -->
@@ -216,7 +355,6 @@
 </div>
 
 <!-- Modal: Day Details -->
-<!-- Modal: Day Details -->
 <div id="dayDetailModal"
     class="fixed inset-0 z-50 bg-black bg-opacity-40 backdrop-blur-sm hidden items-center justify-center">
     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 relative">
@@ -235,7 +373,7 @@
             </div>
         </form>
     </div>
-</div>  
+</div>
 
 <!-- Journal Modal -->
 <div id="journalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm hidden">
@@ -265,9 +403,135 @@
 </div>
 
 <!-- Handwriting Font -->
-<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">  
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
 
 <script>
+    // Settings dropdown functionality
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsDropdown = document.getElementById('settingsDropdown');
+
+    settingsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        settingsDropdown.classList.toggle('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+        if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+            settingsDropdown.classList.add('hidden');
+        }
+    });
+
+    // Improved download functions with better error handling
+    async function downloadAnalysisJSON() {
+        const btn = document.getElementById('jsonExportBtn');
+        const originalText = btn.querySelector('span').textContent;
+
+        try {
+            btn.querySelector('span').textContent = 'Downloading...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/export/json', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'Unknown error';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || `HTTP ${response.status}`;
+                } catch (e) {
+                    errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habit-analysis-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            alert('JSON export downloaded successfully!');
+            settingsDropdown.classList.add('hidden');
+
+        } catch (error) {
+            console.error('JSON Download error:', error);
+            alert(`Error downloading JSON: ${error.message}`);
+        } finally {
+            btn.querySelector('span').textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function downloadAnalysisExcel() {
+        const btn = document.getElementById('excelExportBtn');
+        const originalText = btn.querySelector('span').textContent;
+
+        try {
+            btn.querySelector('span').textContent = 'Generating...';
+            btn.disabled = true;
+
+            const response = await fetch('/api/export/excel', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                let errorMessage = 'Unknown error';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || `HTTP ${response.status}`;
+                } catch (e) {
+                    errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const blob = await response.blob();
+
+            // Check if the response is actually an Excel file
+            if (blob.type.includes('json') || blob.size < 1000) {
+                const text = await blob.text();
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || 'Failed to generate Excel file');
+                } catch (parseError) {
+                    throw new Error('Received invalid response from server');
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habit-analysis-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            alert('Excel export downloaded successfully!');
+            settingsDropdown.classList.add('hidden');
+
+        } catch (error) {
+            console.error('Excel Download error:', error);
+            alert(`Error downloading Excel: ${error.message}`);
+        } finally {
+            btn.querySelector('span').textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // Original modal functionality
     const modal = document.getElementById('habitModal');
     const formModal = document.getElementById('habitFormModal');
     const measurableModal = document.getElementById('measurableFormModal');
@@ -295,6 +559,7 @@
         measurableModal.classList.add('hidden');
     }
 </script>
+
 <script>
     let currentDateStr = '';
 
@@ -404,6 +669,7 @@
         });
     });
 </script>
+
 <script>
     let currentJournalDate = '';
 
@@ -431,5 +697,5 @@
             body: 'content=' + encodeURIComponent(content)
         }).then(() => closeJournalModal());
     }
-</script>          
+</script>
 {% endblock %}
