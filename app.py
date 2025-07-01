@@ -134,7 +134,6 @@ def home():
                            habit_badges=habit_badges,
                            measurable_badges=measurable_badges)
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -291,8 +290,9 @@ def habit_analysis():
         for day in range(1, month_days + 1)
     ]
 
+    username = session.get('username')
     return render_template("habit_analysis.html", habits=habits, marked_dates=marked_dates,
-                           calendar_days=calendar_days, month=month, year=year)
+                           calendar_days=calendar_days, month=month, year=year, username=username)
 
 @app.route('/habit_visual/<int:habit_id>')
 def habit_visual(habit_id):
@@ -412,9 +412,10 @@ def measurable_analysis():
         for d in range(1, calendar.monthrange(year, month)[1] + 1)
     ]
 
+    username = session.get('username')
     return render_template("measurable_analysis.html", measurables=measurables,
                            marked_units=marked_units, calendar_days=days,
-                           month=month, year=year)
+                           month=month, year=year, username=username)
 
 @app.route('/measurable_visual/<int:measurable_id>')
 def measurable_visual(measurable_id):
@@ -502,7 +503,7 @@ def all_journals():
     from collections import defaultdict
 
     entries = Journal.query.filter_by(user_id=session['user_id']).order_by(Journal.date.desc()).all()
-    
+
     journal_map = defaultdict(list)
     for entry in entries:
         dt = datetime.strptime(entry.date, "%Y-%m-%d")
@@ -519,18 +520,18 @@ def export_json():
 
     try:
         user_id = session['user_id']
-        
+
         # Get all habits
         habits = Habit.query.filter_by(user_id=user_id).all()
         habit_logs = HabitLog.query.join(Habit).filter(Habit.user_id == user_id).all()
-        
+
         # Get all measurables
         measurables = Measurable.query.filter_by(user_id=user_id).all()
         measurable_logs = MeasurableLog.query.join(Measurable).filter(Measurable.user_id == user_id).all()
-        
+
         # Get all journals
         journals = Journal.query.filter_by(user_id=user_id).all()
-        
+
         # Prepare export data
         export_data = {
             'export_info': {
@@ -589,7 +590,7 @@ def export_json():
                 'measurable_averages': {}
             }
         }
-        
+
         # Calculate habit completion rates
         for habit in habits:
             logs = [log for log in habit_logs if log.habit_id == habit.id]
@@ -601,7 +602,7 @@ def export_json():
                     'total': total,
                     'rate': round((completed / total) * 100, 2) if total > 0 else 0
                 }
-        
+
         # Calculate measurable averages
         for measurable in measurables:
             logs = [log for log in measurable_logs if log.measurable_id == measurable.id and log.value]
@@ -613,7 +614,7 @@ def export_json():
                     'highest': max(log.value for log in logs),
                     'lowest': min(log.value for log in logs)
                 }
-        
+
         return jsonify(export_data)
     except Exception as e:
         print(f"JSON export error: {str(e)}")
@@ -629,22 +630,22 @@ def export_excel():
 
     try:
         user_id = session['user_id']
-        
+
         # Create simple workbook
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Habit Data Export"
-        
+
         # Add summary info
         ws.append(["Habit Tracker Data Export"])
         ws.append(["Export Date:", datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
         ws.append(["User:", session.get('username', 'Unknown')])
         ws.append([])  # Empty row
-        
+
         # Habits section
         ws.append(["=== HABITS ==="])
         ws.append(["Habit Name", "Type", "Question", "Notes", "Color"])
-        
+
         habits = Habit.query.filter_by(user_id=user_id).all()
         for habit in habits:
             ws.append([
@@ -654,13 +655,13 @@ def export_excel():
                 habit.notes or "",
                 habit.color or ""
             ])
-        
+
         ws.append([])  # Empty row
-        
+
         # Habit logs section
         ws.append(["=== HABIT LOGS ==="])
         ws.append(["Habit Name", "Date", "Completed"])
-        
+
         habit_logs = db.session.query(HabitLog).join(Habit).filter(Habit.user_id == user_id).all()
         for log in habit_logs:
             habit = Habit.query.get(log.habit_id)
@@ -670,13 +671,13 @@ def export_excel():
                     log.date,
                     "Yes" if log.value else "No"
                 ])
-        
+
         ws.append([])  # Empty row
-        
+
         # Measurables section
         ws.append(["=== MEASURABLES ==="])
         ws.append(["Measurable Name", "Question", "Unit Target", "Target Type", "Notes", "Color"])
-        
+
         measurables = Measurable.query.filter_by(user_id=user_id).all()
         for measurable in measurables:
             ws.append([
@@ -687,13 +688,13 @@ def export_excel():
                 measurable.notes or "",
                 measurable.color or ""
             ])
-        
+
         ws.append([])  # Empty row
-        
+
         # Measurable logs section
         ws.append(["=== MEASURABLE LOGS ==="])
         ws.append(["Measurable Name", "Date", "Value"])
-        
+
         measurable_logs = db.session.query(MeasurableLog).join(Measurable).filter(Measurable.user_id == user_id).all()
         for log in measurable_logs:
             measurable = Measurable.query.get(log.measurable_id)
@@ -703,31 +704,31 @@ def export_excel():
                     log.date,
                     log.value if log.value is not None else 0
                 ])
-        
+
         ws.append([])  # Empty row
-        
+
         # Journals section
         journals = Journal.query.filter_by(user_id=user_id).all()
         if journals:
             ws.append(["=== JOURNALS ==="])
             ws.append(["Date", "Content"])
-            
+
             for journal in journals:
                 # Limit content length for Excel compatibility
                 content = journal.content or ""
                 if len(content) > 500:
                     content = content[:500] + "... (truncated)"
-                
+
                 ws.append([
                     journal.date,
                     content
                 ])
-        
+
         # Auto-adjust column widths
         for column in ws.columns:
             max_length = 0
             column_letter = column[0].column_letter
-            
+
             for cell in column:
                 try:
                     cell_value = str(cell.value) if cell.value is not None else ""
@@ -735,22 +736,22 @@ def export_excel():
                         max_length = len(cell_value)
                 except:
                     pass
-            
+
             # Set width (max 50 characters)
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
-        
+
         # Save to memory
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
-        
+
         response = make_response(output.read())
         response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         response.headers['Content-Disposition'] = f'attachment; filename=habit-analysis-{date.today().isoformat()}.xlsx'
-        
+
         return response
-        
+
     except Exception as e:
         print(f"Excel export error: {str(e)}")
         return jsonify({'error': f'Excel export failed: {str(e)}'}), 500
