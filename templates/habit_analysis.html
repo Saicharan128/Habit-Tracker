@@ -2,6 +2,74 @@
 {% block title %}Habit Analysis{% endblock %}
 
 {% block content %}
+<!-- Navbar copied from home.html -->
+<nav class="w-full bg-blue-600 text-white px-6 py-4 shadow flex items-center justify-between relative">
+    <div class="text-2xl font-bold">Habit Tracker</div>
+    <div class="absolute left-1/2 transform -translate-x-1/2 text-white text-lg font-medium">
+        Welcome, {{ username }}
+    </div>
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('habit_analysis') }}"
+            class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
+            Habit Analysis
+        </a>
+        <a href="{{ url_for('measurable_analysis') }}"
+            class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow">
+            Measurement Analysis
+        </a>
+        <div class="relative">
+            <button id="settingsBtn"
+                class="bg-white text-blue-600 px-3 py-1.5 rounded hover:bg-gray-100 transition text-sm font-semibold shadow flex items-center gap-1">
+                ⚙️ Settings
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="settingsDropdown"
+                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 hidden">
+                <div class="p-3 border-b border-gray-200">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {{ username[0].upper() }}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800">{{ username }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="py-2">
+                    <p class="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">Download Analysis</p>
+                    <button id="jsonExportBtn" onclick="downloadAnalysisJSON()"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-left">
+                        <span class="text-blue-500">📄</span>
+                        <span>Export as JSON</span>
+                    </button>
+                    <button id="excelExportBtn" onclick="downloadAnalysisExcel()"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 w-full text-left">
+                        <span class="text-green-500">📊</span>
+                        <span>Export as Excel</span>
+                    </button>
+                </div>
+                <div class="border-t border-gray-200 py-2">
+                    <a href="{{ url_for('all_journals') }}"
+                        class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50">
+                        <span class="text-purple-500">📘</span>
+                        View All Journals
+                    </a>
+                </div>
+                <div class="border-t border-gray-200 py-2">
+                    <a href="{{ url_for('logout') }}"
+                        class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50">
+                        <span>🚪</span>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
 <div class="max-w-6xl mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-6 text-center">Habit Analysis</h1>
 
@@ -10,12 +78,12 @@
         <div class="bg-white rounded shadow p-4">
             <h2 class="text-xl font-semibold mb-2">{{ habit.name }}</h2>
             <p class="text-gray-600 mb-4">{{ habit.question }}</p>
-        
+
             <!-- Mini calendar -->
             <div class="grid grid-cols-7 gap-1 text-center text-sm mb-4">
                 {% for d in calendar_days %}
                 {% set is_yes = d.date_str in marked_dates.get(habit.id, []) %}
-                <div class="p-2 rounded 
+                <div class="p-2 rounded
                                   {% if is_yes %}
                                     bg-green-400 text-white font-semibold
                                   {% else %}
@@ -25,16 +93,99 @@
                 </div>
                 {% endfor %}
             </div>
-        
+
             <!-- Visual Analysis Button -->
             <div class="text-right">
-                <a href="{{ url_for('habit_visual', habit_id=habit.id) }}"
+                <a href="#" onclick="openVisualModal('{{ url_for('habit_visual', habit_id=habit.id) }}'); return false;"
                     class="mt-2 inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded shadow">
                     Visual Analysis
                 </a>
             </div>
-        </div>          
+        </div>
         {% endfor %}
     </div>
 </div>
+
+<!-- Visual Analysis Modal -->
+<div id="visualModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-3xl bg-white rounded-xl shadow-2xl p-4">
+        <button onclick="closeVisualModal()" class="absolute top-2 right-2 text-gray-600 hover:text-gray-800">✕</button>
+        <iframe id="visualIframe" src="" class="w-full h-[80vh]" frameborder="0"></iframe>
+    </div>
+</div>
+
+<script>
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsDropdown = document.getElementById('settingsDropdown');
+    settingsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        settingsDropdown.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function (e) {
+        if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+            settingsDropdown.classList.add('hidden');
+        }
+    });
+
+    async function downloadAnalysisJSON() {
+        const btn = document.getElementById('jsonExportBtn');
+        const originalText = btn.querySelector('span').textContent;
+        try {
+            btn.querySelector('span').textContent = 'Downloading...';
+            btn.disabled = true;
+            const response = await fetch('/api/export/json');
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habit-analysis-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            settingsDropdown.classList.add('hidden');
+        } catch (err) {
+            alert('Error downloading JSON');
+        } finally {
+            btn.querySelector('span').textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function downloadAnalysisExcel() {
+        const btn = document.getElementById('excelExportBtn');
+        const originalText = btn.querySelector('span').textContent;
+        try {
+            btn.querySelector('span').textContent = 'Generating...';
+            btn.disabled = true;
+            const response = await fetch('/api/export/excel');
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `habit-analysis-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            settingsDropdown.classList.add('hidden');
+        } catch (err) {
+            alert('Error downloading Excel');
+        } finally {
+            btn.querySelector('span').textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    function openVisualModal(url) {
+        document.getElementById('visualIframe').src = url;
+        document.getElementById('visualModal').classList.remove('hidden');
+    }
+    function closeVisualModal() {
+        document.getElementById('visualIframe').src = '';
+        document.getElementById('visualModal').classList.add('hidden');
+    }
+</script>
+
 {% endblock %}
