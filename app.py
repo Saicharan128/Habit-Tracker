@@ -291,8 +291,9 @@ def habit_analysis():
         for day in range(1, month_days + 1)
     ]
 
+    username = session.get('username')
     return render_template("habit_analysis.html", habits=habits, marked_dates=marked_dates,
-                           calendar_days=calendar_days, month=month, year=year)
+                           calendar_days=calendar_days, month=month, year=year, username=username)
 
 @app.route('/habit_visual/<int:habit_id>')
 def habit_visual(habit_id):
@@ -412,9 +413,10 @@ def measurable_analysis():
         for d in range(1, calendar.monthrange(year, month)[1] + 1)
     ]
 
+    username = session.get('username')
     return render_template("measurable_analysis.html", measurables=measurables,
                            marked_units=marked_units, calendar_days=days,
-                           month=month, year=year)
+                           month=month, year=year, username=username)
 
 @app.route('/measurable_visual/<int:measurable_id>')
 def measurable_visual(measurable_id):
